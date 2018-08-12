@@ -13,7 +13,6 @@
 
 // wrap in iife for babylon to handle module-level return
 ;(function () {
-
   if (module !== require.main) {
     throw new Error('spawn-wrap: cli wrapper invoked as non-main script')
   }
@@ -22,7 +21,7 @@
   const doDebug = process.env.SPAWN_WRAP_DEBUG === '1'
   var fs
 
-  function debug() {
+  function debug () {
     if (!doDebug) {
       return
     }
@@ -58,9 +57,9 @@
 
   const needExecArgv = settings.execArgv || []
 
-// If the user added their OWN wrapper pre-load script, then
-// this will pop that off of the argv, and load the "real" main
-  function runMain() {
+  // If the user added their OWN wrapper pre-load script, then
+  // this will pop that off of the argv, and load the "real" main
+  function runMain () {
     debug('runMain pre', process.argv)
     process.argv.splice(1, nargs)
     process.argv[1] = path.resolve(process.argv[1])
@@ -70,14 +69,14 @@
     debug('runMain after')
   }
 
-// Argv coming in looks like:
-// bin shim execArgv main argv
-//
-// Turn it into:
-// bin settings.execArgv execArgv settings.argv main argv
-//
-// If we don't have a main script, then just run with the necessary
-// execArgv
+  // Argv coming in looks like:
+  // bin shim execArgv main argv
+  //
+  // Turn it into:
+  // bin settings.execArgv execArgv settings.argv main argv
+  //
+  // If we don't have a main script, then just run with the necessary
+  // execArgv
   let hasMain = false
   for (let a = 2; !hasMain && a < process.argv.length; a++) {
     switch (process.argv[a]) {
@@ -127,10 +126,10 @@
     return
   }
 
-// If there are execArgv, and they're not the same as how this module
-// was executed, then we need to inject those.  This is for stuff like
-// --harmony or --use_strict that needs to be *before* the main
-// module.
+  // If there are execArgv, and they're not the same as how this module
+  // was executed, then we need to inject those.  This is for stuff like
+  // --harmony or --use_strict that needs to be *before* the main
+  // module.
   if (needExecArgv.length) {
     var pexec = process.execArgv
     if (JSON.stringify(pexec) !== JSON.stringify(needExecArgv)) {
@@ -141,35 +140,42 @@
     }
   }
 
-// At this point, we've verified that we got the correct execArgv,
-// and that we have a main file, and that the main file is sitting at
-// argv[2].  Splice this shim off the list so it looks like the main.
+  // At this point, we've verified that we got the correct execArgv,
+  // and that we have a main file, and that the main file is sitting at
+  // argv[2].  Splice this shim off the list so it looks like the main.
   const spliceArgs = [1, 1].concat(argv)
   process.argv.splice.apply(process.argv, spliceArgs)
 
-// Unwrap the PATH environment var so that we're not mucking
-// with the environment.  It'll get re-added if they spawn anything
+  // Unwrap the PATH environment var so that we're not mucking
+  // with the environment.  It'll get re-added if they spawn anything
   const IS_WINDOWS = isWindows()
 
-// TODO: Does not work if trailing?
   if (IS_WINDOWS) {
     for (const i in process.env) {
       if (/^path$/i.test(i)) {
-        process.env[i] = process.env[i].replace(__dirname + ';', '')
+        process.env[i] = removeFromPath(process.env[i], __dirname)
       }
     }
   } else {
-    process.env.PATH = process.env.PATH.replace(__dirname + ':', '')
+    process.env.PATH = removeFromPath(process.env.PATH, __dirname)
+  }
+
+  function removeFromPath (envValue, pathToRemove) {
+    const pathSeparator = isWindows() ? ';' : ':'
+    return envValue
+      .split(pathSeparator)
+      .filter(p => p !== pathToRemove)
+      .join(pathSeparator)
   }
 
   const spawnWrap = require(settings.module)
   if (nargs) {
-    spawnWrap.runMain = function (original) {
+    spawnWrap.runMain = (function (original) {
       return function () {
         spawnWrap.runMain = original
         runMain()
       }
-    }(spawnWrap.runMain)
+    })(spawnWrap.runMain)
   }
   spawnWrap(argv, env, __dirname)
 
