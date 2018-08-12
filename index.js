@@ -15,15 +15,9 @@ const rimraf = require('rimraf')
 const path = require('path')
 const signalExit = require('signal-exit')
 const {IS_DEBUG, debug} = require('./lib/debug')
-const {munge} = require('./lib/munge')
 const {homedir} = require('./lib/homedir')
-
-const shebang = process.platform === 'os390' ? '#!/bin/env ' : '#!'
-
-const shim = shebang + process.execPath + '\n' +
-  fs.readFileSync(path.join(__dirname, 'shim.js'))
-
-const IS_WINDOWS = isWindows()
+const {munge} = require('./lib/munge')
+const {getShim} = require('./lib/shim/index')
 
 function wrap (argv, env, workingDir) {
   const spawnSyncBinding = process.binding('spawn_sync')
@@ -109,7 +103,7 @@ function setup (argv, env) {
   let key = process.pid + '-' + crypto.randomBytes(6).toString('hex')
   let workingDir = homedir + key
 
-  const settings = JSON.stringify({
+  const settings = {
     module: __filename,
     deps: {
       foregroundChild: require.resolve('foreground-child'),
@@ -122,7 +116,8 @@ function setup (argv, env) {
     execArgv: execArgv,
     env: env,
     root: process.pid
-  }, null, 2) + '\n'
+  }
+  const shim = getShim(settings)
 
   signalExit(function () {
     if (!IS_DEBUG) {
@@ -132,7 +127,7 @@ function setup (argv, env) {
 
   mkdirp.sync(workingDir)
   workingDir = fs.realpathSync(workingDir)
-  if (IS_WINDOWS) {
+  if (isWindows()) {
     const cmdShim =
       '@echo off\r\n' +
       'SETLOCAL\r\n' +
@@ -149,7 +144,6 @@ function setup (argv, env) {
     fs.writeFileSync(path.join(workingDir, cmdname), shim)
     fs.chmodSync(path.join(workingDir, cmdname), '0755')
   }
-  fs.writeFileSync(path.join(workingDir, 'settings.json'), settings)
 
   return workingDir
 }
