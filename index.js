@@ -9,6 +9,7 @@ const cp = require('child_process')
 const ChildProcess = cp.ChildProcess
 const assert = require('assert')
 const crypto = require('crypto')
+const isWindows = require('is-windows')
 const mkdirp = require('mkdirp')
 const rimraf = require('rimraf')
 const path = require('path')
@@ -36,11 +37,11 @@ const shebang = process.platform === 'os390' ?
 const shim = shebang + process.execPath + '\n' +
   fs.readFileSync(path.join(__dirname, 'shim.js'))
 
-const isWindows = require('./lib/is-windows')()
+const IS_WINDOWS = isWindows()
 
-const pathRe = isWindows ? /^PATH=/i : /^PATH=/;
+const pathRe = IS_WINDOWS ? /^PATH=/i : /^PATH=/;
 
-const colon = isWindows ? ';' : ':'
+const colon = IS_WINDOWS ? ';' : ':'
 
 
 function wrap(argv, env, workingDir) {
@@ -108,7 +109,7 @@ function mungeSh(workingDir, options) {
     options.originalNode = command
     c = match[1] + match[2] + ' "' + workingDir + '/node" ' + match[3]
     options.args[cmdi + 1] = c
-  } else if (exe === 'npm' && !isWindows) {
+  } else if (exe === 'npm' && !IS_WINDOWS) {
     // XXX this will exhibit weird behavior when using /path/to/npm,
     // if some other npm is first in the path.
     const npmPath = whichOrUndefined('npm')
@@ -123,7 +124,7 @@ function mungeSh(workingDir, options) {
 
 function isCmd(file) {
   const comspec = path.basename(process.env.comspec || '').replace(/\.exe$/i, '')
-  return isWindows && (file === comspec || /^cmd(?:\.exe)?$/i.test(file))
+  return IS_WINDOWS && (file === comspec || /^cmd(?:\.exe)?$/i.test(file))
 }
 
 function mungeCmd(workingDir, options) {
@@ -270,7 +271,7 @@ function mungeEnv(workingDir, options) {
     }
   }
   if (pathEnv === undefined) {
-    options.envPairs.push((isWindows ? 'Path=' : 'PATH=') + workingDir)
+    options.envPairs.push((IS_WINDOWS ? 'Path=' : 'PATH=') + workingDir)
   }
   if (options.originalNode) {
     const key = path.basename(workingDir).substr('.node-spawn-wrap-'.length)
@@ -287,7 +288,7 @@ function mungeEnv(workingDir, options) {
 function isnpm(file) {
   // XXX is this even possible/necessary?
   // wouldn't npm just be detected as a node shebang?
-  return file === 'npm' && !isWindows
+  return file === 'npm' && !IS_WINDOWS
 }
 
 function mungenpm(workingDir, options) {
@@ -389,6 +390,7 @@ function setup(argv, env) {
     module: __filename,
     deps: {
       foregroundChild: require.resolve('foreground-child'),
+      isWindows: require.resolve('is-windows'),
       signalExit: require.resolve('signal-exit'),
     },
     key: key,
@@ -407,7 +409,7 @@ function setup(argv, env) {
 
   mkdirp.sync(workingDir)
   workingDir = fs.realpathSync(workingDir)
-  if (isWindows) {
+  if (IS_WINDOWS) {
     const cmdShim =
       '@echo off\r\n' +
       'SETLOCAL\r\n' +
