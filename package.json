@@ -41,5 +41,10 @@
     "lib/index.js",
     "shim.js",
     "lib/is-windows.js"
-  ]
+  ],
+  "standard": {
+    "ignore": [
+      "lib/node-internals"
+    ]
+  }
 }
