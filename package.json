@@ -13,7 +13,7 @@
     "which": "^1.3.0"
   },
   "engines": {
-    "node": ">=4.0.0"
+    "node": ">=6.0.0"
   },
   "scripts": {
     "test": "tap --timeout=240 \"test/*.js\"",
