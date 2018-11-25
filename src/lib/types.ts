@@ -1,5 +1,5 @@
 import cp from "child_process";
-import { SwContext } from "./context";
+import { SwContext, SwMode } from "./context";
 
 export interface RootProcess {
   pid: number;
@@ -45,10 +45,11 @@ export interface SwOptions {
   shimRoot?: string;
 
   /**
-   * Try to run the wrapper and original main in the same process.
-   * If `true`, then `WrapperApi` will have a `runMain`, otherwise not.
+   * Run the wrapped and wrapper modules in the same process or not.
+   *
+   * See `SwMode` documentation for more details.
    */
-  sameProcess?: boolean;
+  mode: SwMode;
 }
 
 /**
@@ -71,7 +72,29 @@ export interface InternalSpawnOptions {
  * Options transformed by the mungers.
  */
 export interface NormalizedOptions {
+  /**
+   * Executable path
+   *
+   * Relative or absolute.
+   */
   readonly file: string;
+
+  /**
+   * Argv0 followed by arguments.
+   *
+   * Argv0 is often the same as `file` but not always (can be changed with the
+   * `spawn` option `argv0`).
+   * Example:
+   * ```
+   * ["node", "--experimental-modules", "main.mjs"]
+   * ```
+   */
   readonly args: ReadonlyArray<string>;
+
+  /**
+   * Map of environment variables.
+   *
+   * The map is case sensitive and can contain both `path` and `PATH`.
+   */
   readonly env: ReadonlyMap<string, string>;
 }
